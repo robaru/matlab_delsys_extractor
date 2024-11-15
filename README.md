@@ -1,5 +1,6 @@
 # MATLAB Utility for Processing Delsys EMG Data
 
+This repository provides a MATLAB function, `extract_delsys_data`, designed to simplify and process data exported from the **Delsys Trigno Wireless EMG system**. I have found the exported data from the [Delsys File Utility](https://delsys.com/support/software/) organized in a complex structure, making it challenging to work with directly. This function facilitates data extraction, transformation, and resampling, aiming to provide a data structure easier to work with.
 
 ---
 
