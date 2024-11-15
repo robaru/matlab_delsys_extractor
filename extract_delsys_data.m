@@ -1,4 +1,4 @@
-function datastreams = extract_delsys_data(delsys_data, names, flag_resample, flag_plotting)
+function datastreams = extract_delsys_data(data_path, names, flag_resample, flag_plotting)
 % EXTRACT_DELSYS_DATA Extracts and processes data from Delsys sensors.
 %
 %   datastreams = EXTRACT_DELSYS(delsys_data, names, flag_resample)
@@ -7,7 +7,8 @@ function datastreams = extract_delsys_data(delsys_data, names, flag_resample, fl
 %   resampled to a different sampling rate.
 %
 %   INPUTS:
-%       delsys_data   - A structure obtained from Delsys export utility with the following fields:
+%       data_path     - A path to the mat file obtained from Delsys export utility. 
+%                       The mat file should contain a structure with the following fields:
 %                       'Time'     : Time vector for the data.
 %                       'Channels' : Cell array of channel names.
 %                       'Fs'       : Sampling frequency of the data.
@@ -36,6 +37,9 @@ function datastreams = extract_delsys_data(delsys_data, names, flag_resample, fl
 %   Version: 1.0
 %   Email: roberto.barumerli@univr.it 
 
+    assert(exist(data_path, 'file'), 'File not found')
+    delsys_data = load(data_path);
+    
     assert(isfield(delsys_data, 'Time'))
     assert(isfield(delsys_data, 'Channels'))
     assert(isfield(delsys_data, 'Fs'))

@@ -7,7 +7,7 @@ clearvars
 close all
 
 % Using data from pilot
-pilot_data = load('data_delsys.mat');
+pilot_data_path = 'data_delsys.mat';
 
 flag_resample = 1; 
 flag_plotting = 1; 
@@ -17,4 +17,4 @@ names = {'cinematica', 'acc', 100; ...
          'spinale', 'emg', 1000; ...
          'retto', 'emg', 1000};
 
-dts = extract_delsys_data(pilot_data, names, flag_resample, flag_plotting)
+dts = extract_delsys_data(pilot_data_path, names, flag_resample, flag_plotting)
