@@ -43,7 +43,7 @@ function datastreams = extract_delsys_data(data_path, names, flag_resample, flag
     assert(isfield(delsys_data, 'Time'))
     assert(isfield(delsys_data, 'Channels'))
     assert(isfield(delsys_data, 'Fs'))
-    assert(isfield(delsys_data, 'Data'))
+    assert(isfield(delsys_data, 'Data'), 'Missing DATA field from mat file')
 
     assert(iscell(names) & size(names, 2) > 1)
 
@@ -59,6 +59,8 @@ function datastreams = extract_delsys_data(data_path, names, flag_resample, flag
     datastreams = cell(size(names, 1), 2);
     
     for n = 1:size(names, 1)
+        flag_skip = 0;
+
         channels = {}; 
 
         % load names into channels (using cell array because easier) 
@@ -67,7 +69,7 @@ function datastreams = extract_delsys_data(data_path, names, flag_resample, flag
         % find idx with name 
         idx_channel = cellfun(@(x) contains(x, names{n,1}, 'IgnoreCase', true), channels);
     
-        assert(sum(idx_channel) > 0, 'name %s not found in the channels', names{n,1})
+        assert(sum(idx_channel) >= 0, 'name %s not found in the channels', names{n,1})
     
         % get data
         dt = delsys_data.Data(idx_channel,:); 
@@ -76,47 +78,64 @@ function datastreams = extract_delsys_data(data_path, names, flag_resample, flag
         
         if ~isempty(names{n,2}) % if empty keep them all
             % look for specific field (EMG, ACC...) of the selected channel
-            idx_field = cellfun(@(x) contains(x, names{n,2}, 'IgnoreCase', true), channels(idx_channel, :));
-            
-            assert(sum(idx_field) > 0, 'channel %s: name %s not found in the fields', names{n,1}, names{n,2})
+            idx_field_temp = cellfun(@(x) contains(x, names{n,2}, 'IgnoreCase', true), channels);
+            idx_field = idx_field_temp & idx_channel;
+            idx_field_temp(~idx_channel) = [];
+
+            if sum(idx_field_temp) == 0
+                warning('channel %s: name %s not found in the fields', names{n,1}, names{n,2})
+                flag_skip = 1;
+            end
     
-            % keep only select fields
-            dt = dt(idx_field,:);
-            fs = fs(idx_field,:);
-            time = time(idx_field,:);
+            % keep only select fields if found
+            dt = dt(idx_field_temp,:);
+            fs = fs(idx_field_temp,:);
+            time = time(idx_field_temp,:);
         else 
             error('Not supported since EMG and accelerometer have different fs. Add a second row in names.')
         end
     
-        % since we are extracting the same quantity with multiple channels,
-        % these should have the same sampling rate
-        assert(length(unique(fs)) == 1, 'way to many sampling rates')
-        fs = unique(fs); 
-    
-        % collapsing time to a single dimension
-        time = time(1, :);
-    
-        % delsys does some zero padding to align the data with different
-        % sampling rates. 
-        % To solve this, we compute the diff and we take the last position
-        % going to zero
-        idx_sample = find(diff(dt(1,:)==0));
-        dt = dt(:, 1:idx_sample(end));
-        time = time(:, 1:idx_sample(end));
-    
-        % resample? 
-        if flag_resample
-            assert(names{n,3} > 0, 'something is wrong with the resampling fs');
-    
-            fs =  names{n,3};
-            dt = resample(dt', time, fs)'; % transposing
+        if ~flag_skip
+            % since we are extracting the same quantity with multiple channels,
+            % these should have the same sampling rate
+            assert(length(unique(fs)) == 1, 'way to many sampling rates')
+            fs = unique(fs); 
+        
+            % collapsing time to a single dimension
+            time = time(1, :);
+        
+            % delsys does some zero padding to align the data with different
+            % sampling rates. 
+            % To solve this, we compute the diff and we take the last position
+            % going to zero
+            idx_sample = find(diff(dt(1,:)==0));
+            if ~isempty(idx_sample)
+                dt = dt(:, 1:idx_sample(end));
+                time = time(:, 1:idx_sample(end));
+            end
+        
+            % resample? 
+            if flag_resample
+                assert(names{n,3} > 0, 'something is wrong with the resampling fs');
+        
+                fs =  names{n,3};
+                dt = resample(dt', time, fs); % transposing
+            end
+        
+            % save data and sampling rate
+            datastreams{n,1} = dt;
+            datastreams{n,2} = fs;
+            datastreams{n,3} = names{n, 1};
+            datastreams{n,4} = names{n, 2};
+            datastreams{n,5} = channels(idx_field, 1);
+        else
+            % save data and sampling rate
+            datastreams{n,1} = [];
+            datastreams{n,2} = [];
+            datastreams{n,3} = names{n, 1};
+            datastreams{n,4} = names{n, 2};
+            datastreams{n,5} = 'not found';
         end
-    
-        % save data and sampling rate
-        datastreams{n,1} = dt;
-        datastreams{n,2} = fs;
-        datastreams{n,3} = names{n, 1};
-        datastreams{n,4} = names{n, 2};
     end
 
     if flag_plotting
